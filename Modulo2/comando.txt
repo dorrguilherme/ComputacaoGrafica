@@ -1,0 +1,3 @@
+g++ main.cpp glad.cpp -o seu_programa -I./ -I/opt/homebrew/Cellar/glfw/3.4/include -I/opt/homebrew/Cellar/glm/1.0.1/include -L/opt/homebrew/Cellar/glfw/3.4/lib -lglfw -framework OpenGL
+
+ ./seu_programa 
