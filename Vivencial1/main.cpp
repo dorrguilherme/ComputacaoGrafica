@@ -270,7 +270,7 @@ int main()
 #endif
 
     //Criacao da janela GLFW
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Tarefa Modulo 2 -- Guilherme Dorr!", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Tarefa Vivencial 1 -- Guilherme Dorr!", nullptr, nullptr);
     if (!window)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
