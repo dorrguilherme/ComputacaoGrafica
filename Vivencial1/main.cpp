@@ -220,53 +220,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         
         rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;}
     }
-
-	// if (key == GLFW_KEY_X && action == GLFW_PRESS)
-	// {
-	// 	rotateX = true;
-	// 	rotateY = false;
-	// 	rotateZ = false;
-	// }
-
-	// if (key == GLFW_KEY_Y && action == GLFW_PRESS)
-	// {
-	// 	rotateX = false;
-	// 	rotateY = true;
-	// 	rotateZ = false;
-	// }
-
-	// if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-	// {
-	// 	rotateX = false;
-	// 	rotateY = false;
-	// 	rotateZ = true;
-	// }
-
-    // const float translationSpeed = 0.001f;
-    // if (action == GLFW_PRESS || action == GLFW_REPEAT)
-    // {
-    //     switch (key)
-    //     {
-    //         case GLFW_KEY_W:
-    //             w = true; s = false; a = false; d = false; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_S:
-    //             w = false; s = true; a = false; d = false; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_A:
-    //             w = false; s = false; a = true; d = false; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_D:
-    //             w = false; s = false; a = false; d = true; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_I:
-    //             w = false; s = false; a = false; d = false; i = true; j = false;
-    //             break;
-    //         case GLFW_KEY_J:
-    //             w = false; s = false; a = false; d = false; i = false; j = true;
-    //             break;
-    //     }
-    // }
 }
 
 

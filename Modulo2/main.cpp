@@ -3,61 +3,153 @@
  * Código desenvolvido por Guilherme Dorr
  * 
 **/
-
 #include <iostream>
 #include <string>
 #include <assert.h>
-
-using namespace std;
-
-// GLAD
+#include <vector>
+#include <Shader.h>
+#include <SceneObject.cpp>
 #include <glad.h>
-
-// GLFW
 #include <GLFW/glfw3.h>
-
-//GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+using namespace std;
+
 //Callback de teclado
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
-
-glm::mat4 model = glm::mat4(1.0f);
 
 //Dimensoes de janela
 const GLuint WIDTH = 1000, HEIGHT = 1000;
 
-// Código fonte vertexShader
-const GLchar* vertexShaderSource = "#version 410\n"
-"layout (location = 0) in vec3 position;\n"
-"layout (location = 1) in vec3 color;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"out vec4 finalColor;\n"
-"void main()\n"
-"{\n"
-"gl_Position = projection * view * model * vec4(position, 1.0);\n"
-"finalColor = vec4(color, 1.0);\n"
-"}\0";
+// Variáveis de controle de rotacao, translacao, escala e direcao
+bool rotateX = false, rotateY = false, rotateZ = false;        
+bool translateX = false, translateY = false, translateZ = false;
+int translateDirection = 0;
+float scale = 1.0;      
 
-const GLchar* fragmentShaderSource = "#version 410\n"
-"in vec4 finalColor;\n"
-"out vec4 color;\n"
-"void main()\n"
-"{\n"
-"color = finalColor;\n"
-"}\n\0";
-
-bool rotateX=false, rotateY=false, rotateZ=false, w = false, a = false, s = false, d = false, i = false, j = false;
-bool teclas[6] = {false, false, false, false, false, false};
-// 0 - w    1 - a   2 - s   3 - d   4 - i   5 - j
-
-// Declaração das funções
-GLuint setupShader();
 int setupGeometry();
+
+// Funcao de ajuste de escala
+void adjustScale(int key, int action)
+{
+    // Verifica se a tecla de escala foi pressionada
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        scale -= 0.1f;
+    }
+    else if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+    {
+        scale += 0.1f; // Marca a escala como aplicada
+    }
+}
+
+// Funcao de ajuste de rotacao
+void adjustRotation(int key, int action) {
+    switch (key) {
+        case(GLFW_KEY_X):
+            if (action == GLFW_PRESS) {
+                rotateX = true; 
+                rotateY = false;
+                rotateZ = false;
+            }
+            break;
+        case(GLFW_KEY_Y):
+            if (action == GLFW_PRESS) {
+                rotateX = false;
+                rotateY = true;
+                rotateZ = false;
+            }
+            break;
+        case(GLFW_KEY_Z):
+            if (action == GLFW_PRESS) {
+                rotateX = false;
+                rotateY = false;
+                rotateZ = true;
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+// Funcao de ajuste de translacao
+void adjustTranslation(int key)
+{
+	switch (key)
+	{
+	case(GLFW_KEY_W):
+		translateX = true;
+		translateY = false;
+		translateZ = false;
+		translateDirection = 1;
+		break;
+	case(GLFW_KEY_S):
+		translateX = true;
+		translateY = false;
+		translateZ = false;
+		translateDirection = -1;
+		break;
+	case(GLFW_KEY_I):
+		translateX = false;
+		translateY = true;
+		translateZ = false;
+		translateDirection = 1;
+		break;
+	case(GLFW_KEY_J):
+		translateX = false;
+		translateY = true;
+		translateZ = false;
+		translateDirection = -1;
+		break;
+	case(GLFW_KEY_A):
+		translateX = false;
+		translateY = false;
+		translateZ = true;
+		translateDirection = 1;
+		break;
+	case(GLFW_KEY_D):
+		translateX = false;
+		translateY = false;
+		translateZ = true;
+		translateDirection = -1;
+		break;
+	default:
+		break;
+	}
+}
+
+// Funcao de retorno ao estado original de variaveis de controle
+void resetTranslationVariables() {
+	translateX = false;
+	translateY = false;
+	translateZ = false;
+	translateDirection = 0;
+}
+
+// Cria e retorna um vetor de objetos da cena, representando cubos, distribuídos horizontalmente, com base no número fornecido (numCubes)
+
+std::vector<SceneObject> gerarCubos(int numCubes, GLuint vertexArrayObject, int numVertices, Shader* shader) {
+	std::vector<SceneObject> cubos;
+
+	const float espacamento = 2.0f;
+
+	for (int i = 0; i < numCubes; ++i)
+	{
+		float posX = 0.0f;
+
+		if (i % 2 == 0)
+			posX = (-espacamento) * (i / 2);
+		else
+			posX = (espacamento) * ((i / 2) + 1);
+
+		cubos.push_back(SceneObject(vertexArrayObject, numVertices, shader, glm::vec3(posX, 0.0, 0.0)));
+	}
+
+	return cubos;
+}
+
 
 int main()
 {
@@ -108,211 +200,90 @@ int main()
     glViewport(0, 0, width, height);
 
     //Compilando e buildando o programa de shader
-    GLuint shaderID = setupShader();
+    Shader shader("vertexshader.vs", "fragmentshader.fs");
+    glUseProgram(shader.ID);
 
     //Configurando a geometria (VAO, VBO)
     GLuint VAO = setupGeometry();
 
     //Ativando o programa de shader
-    glUseProgram(shaderID);
+    glUseProgram(shader.ID);
 
-// Configurando matrizes de modelo, visualização e projeção
+    // Configurando matrizes de modelo, visualização e projeção
     glm::mat4 model = glm::mat4(1.0f); // Matriz identidade
     glm::mat4 view = glm::lookAt(glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
-    GLint modelLoc = glGetUniformLocation(shaderID, "model");
-    GLint viewLoc = glGetUniformLocation(shaderID, "view");
-    GLint projectionLoc = glGetUniformLocation(shaderID, "projection");
+    GLint modelLoc = glGetUniformLocation(shader.ID, "model");
+    GLint viewLoc = glGetUniformLocation(shader.ID, "view");
+    GLint projectionLoc = glGetUniformLocation(shader.ID, "projection");
 
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	glEnable(GL_DEPTH_TEST);
 
-	// Loop da aplica��o - "game loop"
-	while (!glfwWindowShouldClose(window))
-	{
-        //Checa se houveram eventos de input (key pressed, mouse moved etc.) e chama as funcoes de callback correspondentes
-        glfwPollEvents();
+    int quantidadeCubos = 4;
+    std::vector<SceneObject> cubes = gerarCubos(quantidadeCubos, VAO, 36, &shader);
 
-        //Limpa o buffer de cor e de profundidade
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // Cor de fundo
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    while (!glfwWindowShouldClose(window))
+	    {
+		    resetTranslationVariables();
 
-		glLineWidth(10);
-		glPointSize(20);
+            // Checa se houveram eventos de input (key pressed, mouse moved etc.) e chama as funções de callback correspondentes
+            glfwPollEvents();
 
-		float angle = (GLfloat)glfwGetTime();
+            // Limpa o buffer de cor
+            glClearColor(1.0f, 1.0f, 1.0f, 1.0f); //cor de fundo
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //Atualizando a matriz de modelo
-        model = glm::mat4(1.0f); 
-        const float translationSpeed = 0.1f;
+            glLineWidth(10);
+            glPointSize(20);
 
-        if (rotateX) {
-            
-            model = glm::rotate(model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        } else if (rotateY){
-            
-            model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        } else if (rotateZ){
+            for (int i = 0; i < cubes.size(); ++i)
+            {
+                if (rotateX)
+                    cubes[i].rotateX();
+                else if (rotateY)
+                    cubes[i].rotateY();
+                else if (rotateZ)
+                    cubes[i].rotateZ();
 
-            model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-        } else if (teclas[0]) { // W
+                if (translateX)
+                    cubes[i].translateX(translateDirection);
+                else if (translateY)
+                    cubes[i].translateY(translateDirection);
+                else if (translateZ)
+                    cubes[i].translateZ(translateDirection);
 
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, translationSpeed));
-        } else if (teclas[1]) { // A
+                cubes[i].setScale(glm::vec3(scale, scale, scale));
+                cubes[i].updateModelMatrix();
+                cubes[i].renderObject();
+            }
 
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, -translationSpeed));
-        } else if (teclas[2]) { // S
-
-            model = glm::translate(model, glm::vec3(-translationSpeed, 0.0f, 0.0f));
-        } else if (teclas[3]) { // D
-
-            model = glm::translate(model, glm::vec3(translationSpeed, 0.0f, 0.0f));
-        } else if (teclas[4]) { // I
-
-            model = glm::translate(model, glm::vec3(0.0f, translationSpeed, 0.0f));
-        } else if (teclas[5]) { // J
-
-            model = glm::translate(model, glm::vec3(0.0f, -translationSpeed, 0.0f));
-        }
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
-        // Chamada de desenho - drawcall
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-
-        // Troca os buffers da tela
-        glfwSwapBuffers(window);
+		// Troca os buffers da tela
+		glfwSwapBuffers(window);
 	}
 
     //Limpeza e desalocacao
     glDeleteVertexArrays(1, &VAO);
-    glDeleteProgram(shaderID);
+    glDeleteProgram(shader.ID);
     glfwTerminate();
 
     return 0;
 }
 
+// Função callback acionada quando há interação com o teclado
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-    if(action == GLFW_PRESS) {
-        switch (key) {
-
-            case GLFW_KEY_X: rotateX = true; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} break;
-            case GLFW_KEY_Y: rotateX = false; rotateY = true; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} break;
-            case GLFW_KEY_Z: rotateX = false; rotateY = false; rotateZ = true; for(int i = 0; i < 7; i++) {teclas[i] = false;} break;
-            case GLFW_KEY_W: rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} teclas[0] = true; break;
-            case GLFW_KEY_A: rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} teclas[1] = true; break;
-            case GLFW_KEY_S: rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} teclas[2] = true; break;
-            case GLFW_KEY_D: rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} teclas[3] = true; break;
-            case GLFW_KEY_I: rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} teclas[4] = true; break;
-            case GLFW_KEY_J: rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;} teclas[5] = true; break;
-        }
-    }
-
-    if(action == GLFW_RELEASE) {
-        
-        rotateX = false; rotateY = false; rotateZ = false; for(int i = 0; i < 7; i++) {teclas[i] = false;}
-    }
-
-	// if (key == GLFW_KEY_X && action == GLFW_PRESS)
-	// {
-	// 	rotateX = true;
-	// 	rotateY = false;
-	// 	rotateZ = false;
-	// }
-
-	// if (key == GLFW_KEY_Y && action == GLFW_PRESS)
-	// {
-	// 	rotateX = false;
-	// 	rotateY = true;
-	// 	rotateZ = false;
-	// }
-
-	// if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-	// {
-	// 	rotateX = false;
-	// 	rotateY = false;
-	// 	rotateZ = true;
-	// }
-
-    // const float translationSpeed = 0.001f;
-    // if (action == GLFW_PRESS || action == GLFW_REPEAT)
-    // {
-    //     switch (key)
-    //     {
-    //         case GLFW_KEY_W:
-    //             w = true; s = false; a = false; d = false; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_S:
-    //             w = false; s = true; a = false; d = false; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_A:
-    //             w = false; s = false; a = true; d = false; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_D:
-    //             w = false; s = false; a = false; d = true; i = false; j = false;
-    //             break;
-    //         case GLFW_KEY_I:
-    //             w = false; s = false; a = false; d = false; i = true; j = false;
-    //             break;
-    //         case GLFW_KEY_J:
-    //             w = false; s = false; a = false; d = false; i = false; j = true;
-    //             break;
-    //     }
-    // }
+	adjustScale(key, action);
+	adjustRotation(key, action);
+	adjustTranslation(key);
 }
-
-
-GLuint setupShader()
-{
-    // Vertex shader
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    // Checando erros de compilação (exibição via log no terminal)
-    GLint success;
-    GLchar infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    // Fragment shader
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    // Checando erros de compilação (exibição via log no terminal)
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    // Linkando os shaders e criando o identificador do programa de shader
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    // Checando por erros de linkagem
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    return shaderProgram;
-}
-
 
 int setupGeometry()
 {
